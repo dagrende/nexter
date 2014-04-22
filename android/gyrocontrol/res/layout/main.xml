@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+    
+	<TextView
+		android:id="@+id/status"
+	    android:layout_width="fill_parent" 
+	    android:layout_height="wrap_content"
+	    />
+	<se.rende.gyro.TwoSticksView
+		android:id="@+id/twoSticks"
+	    android:layout_width="fill_parent" 
+	    android:layout_height="fill_parent" 
+		/>
+    <SeekBar
+    	android:id="@+id/gyro_factor"
+  	    android:layout_width="fill_parent" 
+	    android:layout_height="wrap_content"
+	    android:layout_gravity="bottom"
+	    android:max="1000"
+	    android:progress="0"
+    />
+</FrameLayout>
