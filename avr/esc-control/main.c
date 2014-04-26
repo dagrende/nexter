@@ -107,16 +107,19 @@ ISR(TIMER1_COMPA_vect) {
 	TCNT1 = 0;
 }
 
-// each 1ms
 ISR(TIMER0_COMPA_vect) {
+	// each 1ms
 	if (escSignalPhase == 20) {
+		// each 20ms
 		escSignalPhase = 0;
 		startEscSignaling();
 
+		// turn off motors after MAX_TICKS_BETWEEN_COMMANDS ticks
 		if (ticksSinceLastCommand > MAX_TICKS_BETWEEN_COMMANDS) {
 			for (u08 i = 0; i < MOTOR_COUNT; i++) {
 				speed[i] = 0;
 			}
+//			putstr("z");
 		} else {
 			ticksSinceLastCommand++;
 		}
@@ -160,6 +163,16 @@ ISR(TIMER0_COMPA_vect) {
 	TCNT0 = 0;	// reset to get interrupt again
 }
 
+void setBluetoothName(char *name) {
+	putstr("AT+NAME");
+	putstr(name);
+}
+
+void setBluetoothPin(char *pin) {
+	putstr("AT+PIN");
+	putstr(pin);
+}
+
 int main(void) {
 	// setup timer 1 in CTC mode, SIG_OUTPUT_COMPARE0A after a calculated interval
     TCCR1A = 0;  			// Mode CTC
@@ -176,12 +189,15 @@ int main(void) {
 
     uartInit(10); // 129 for 9600bps at 20MHz clock, 10 for 115200
 
-
-
     sei();
+
+//    setBluetoothPin("0000");
+//    setBluetoothName("nexter");
+
     while (1) {
     	if (lineAvail()) {
     		u08 ch = getch();
+    		putstr("ch"); eol();
     		if (ch == 'p') {
     			// set power command for motor 0-3
     			// "pxx xx xx xx\r"
@@ -204,6 +220,7 @@ int main(void) {
     			ticksSinceLastCommand = 0;
     		}
     		while (getch() != '\r') {}
+
     	}
     }
 }
