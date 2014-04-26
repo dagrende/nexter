@@ -95,7 +95,7 @@ void startEscSignaling() {
 
 // called at end of pulse for motor motorNo
 // turns off pulse for this motor and starts timer for next motor
-ISR(SIG_OUTPUT_COMPARE1A) {
+ISR(TIMER1_COMPA_vect) {
 	PORTB &= ~(1 << motorNo);
 	motorNo++;
 	if (motorNo < MOTOR_COUNT) {
@@ -108,7 +108,7 @@ ISR(SIG_OUTPUT_COMPARE1A) {
 }
 
 // each 1ms
-ISR(SIG_OUTPUT_COMPARE0A) {
+ISR(TIMER0_COMPA_vect) {
 	if (escSignalPhase == 20) {
 		escSignalPhase = 0;
 		startEscSignaling();
@@ -175,6 +175,8 @@ int main(void) {
     DDRB = 0b00001111;	// esc signal 0-3
 
     uartInit(10); // 129 for 9600bps at 20MHz clock, 10 for 115200
+
+
 
     sei();
     while (1) {

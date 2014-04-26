@@ -33,7 +33,7 @@ void uartInit(u16 baudRateFactor) {
     sei();
 }
 
-SIGNAL(SIG_USART_RECV) {
+SIGNAL(USART_RX_vect) {
 //	PORTB |= 1;
     u08 ch = UDR0 & 0x7f;
 /*    if (ch == 'S' - ' ' || ch == 'Q' - ' ') {
