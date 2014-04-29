@@ -39,9 +39,13 @@ public class GyroStream extends Activity {
 		super.onCreate(savedInstanceState);
 		
 		setContentView(R.layout.manual);
-		CheckBox armCheckbox = (CheckBox) findViewById(R.id.armCheckbox);
+		
+		CheckBox armCheckbox = (CheckBox) findViewById(R.id.armCheckBox);
 		armCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 		   public void onCheckedChanged(CompoundButton buttonView,boolean isChecked) {
+			   if (isChecked) {
+				   upSeekBar.setProgress(0);
+			   }
 			   flightService.setArmed(isChecked);
 		   }
 		});
@@ -49,18 +53,25 @@ public class GyroStream extends Activity {
 		btStatus = (TextView) findViewById(R.id.btStatus);
 		btStatus.setText("Not connected");
 		
-		Button resetButton = (Button) findViewById(R.id.resetButton);
-		resetButton.setOnClickListener(new View.OnClickListener() {
-			public void onClick(View v) {
-				flightService.reset();
-			}
-		});
+		CheckBox onCheckBox = (CheckBox) findViewById(R.id.onCheckBox);
+		onCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+			   public void onCheckedChanged(CompoundButton buttonView,boolean isChecked) {
+				   if (isChecked) {
+					   flightService.start();
+				   } else {
+					   flightService.stop();
+				   }
+			   }
+			});
 		
 		globeView = (GlobeView) findViewById(R.id.globeView);
 		
-		handlePIDSeekBars();
+		handleOnePIDParam(R.id.pSeekBar, "gp", 100f, 0.8f);
+		handleOnePIDParam(R.id.iSeekBar, "gi", 100f, 0);
+		handleOnePIDParam(R.id.dSeekBar, "gd", 500f, 150);
+		handleOnePIDParam(R.id.wSeekBar, "gw", 5000f, 1000);
 
-		SeekBar upSeekBar = (SeekBar) findViewById(R.id.upSeekBar);
+		upSeekBar = (SeekBar) findViewById(R.id.upSeekBar);
 		upSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 	        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 	        	sticks.up = progress;
@@ -82,7 +93,7 @@ public class GyroStream extends Activity {
         flightService.setSticks(sticks);
         flightService.addAngleListener(new FlightService.AngleListener() {
         	public void angleChanged(final double pitch, final double roll, final double yaw) {
-        		if (!flightService.isArmed() && globeView != null) {
+        		if (globeView != null) {
 	        		globeView.post(new Runnable() {
 	        			double[] power = flightService.getPower();
 	    				public void run() {
@@ -176,7 +187,6 @@ public class GyroStream extends Activity {
 //				startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
 			}
 		}
-    	flightService.start();
 	}
     
     @Override
@@ -228,7 +238,7 @@ public class GyroStream extends Activity {
                 if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
                 switch (BluetoothService.BluetoothServiceState.values()[msg.arg1]) {
                 case CONNECTED:
-//                    showState("Connected to: ");
+                    showState("Connected");
 //                    mConversationArrayAdapter.clear();
                     break;
                 case CONNECTING:
@@ -290,5 +300,6 @@ public class GyroStream extends Activity {
 
     };
 	private TextView btStatus;
+	private SeekBar upSeekBar;
 
 }

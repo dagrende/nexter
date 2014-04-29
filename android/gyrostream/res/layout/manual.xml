@@ -12,24 +12,6 @@
         android:layout_alignParentLeft="true"
         android:paddingTop="10dp" />
 
-    <CheckBox
-        android:id="@+id/armCheckbox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true"
-        android:text="Arm" />
-
-    <TextView
-        android:id="@+id/btStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignBaseline="@+id/armCheckbox"
-        android:layout_alignBottom="@+id/armCheckbox"
-        android:layout_alignParentRight="true"
-        android:text="Medium Text"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
-
     <SeekBar
         android:id="@+id/wSeekBar"
         android:layout_width="match_parent"
@@ -64,7 +46,7 @@
         android:layout_height="wrap_content"
         android:layout_above="@+id/pSeekBar"
         android:layout_alignParentLeft="true"
-        android:layout_below="@+id/armCheckbox" />
+        android:layout_below="@+id/onCheckBox" />
 
     <TextView
         android:id="@+id/textViewP"
@@ -106,13 +88,31 @@
         android:text="W"
         android:textAppearance="?android:attr/textAppearanceMedium" />
 
-    <Button
-        android:id="@+id/resetButton"
-        style="?android:attr/buttonStyleSmall"
+    <CheckBox
+        android:id="@+id/armCheckBox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@+id/onCheckBox"
+        android:text="Arm" />
+
+    <TextView
+        android:id="@+id/btStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/armCheckBox"
+        android:layout_alignBottom="@+id/armCheckBox"
         android:layout_alignParentRight="true"
-        android:layout_below="@+id/armCheckbox"
-        android:text="Reset" />
+        android:layout_marginRight="18dp"
+        android:text="Medium Text"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <CheckBox
+        android:id="@+id/onCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:text="On" />
 
 </RelativeLayout>
