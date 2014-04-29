@@ -115,12 +115,17 @@ public class FlightService {
 	}
 
 	public void stop() {
-		Log.d("FlightService", "stop"); // qwe
+		Log.d("FlightService", "stop");
 		sensorManager.unregisterListener(sensorEventListener, gyroscope);
 		sensorManager.unregisterListener(sensorEventListener, accelerometer);
 
 	}
 
+	public void reset() {
+		stop();
+		start();
+	}
+	
 	public class MySensorEventListener implements SensorEventListener {
 		private long lastTime;
 		Mode mode;
@@ -512,7 +517,7 @@ public class FlightService {
 	 * @return true if set, false if not a valid property
 	 * @throws NumberFormatException if value is not parsable to the property datatype
 	 */
-	private boolean setProperty(String propName, String value) {
+	public boolean setProperty(String propName, String value) {
 		if ("gp".equals(propName)) {
 			double doubleValue = Double.parseDouble(value);
 			gyroPID[0].p = doubleValue;

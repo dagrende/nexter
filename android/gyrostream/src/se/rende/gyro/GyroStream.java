@@ -14,9 +14,12 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class GyroStream extends Activity {
@@ -42,8 +45,21 @@ public class GyroStream extends Activity {
 			   flightService.setArmed(isChecked);
 		   }
 		});
+		
+		btStatus = (TextView) findViewById(R.id.btStatus);
+		btStatus.setText("Not connected");
+		
+		Button resetButton = (Button) findViewById(R.id.resetButton);
+		resetButton.setOnClickListener(new View.OnClickListener() {
+			public void onClick(View v) {
+				flightService.reset();
+			}
+		});
+		
 		globeView = (GlobeView) findViewById(R.id.globeView);
-		Log.d("DEBUG", "globeView=" + globeView);
+		
+		handlePIDSeekBars();
+
 		SeekBar upSeekBar = (SeekBar) findViewById(R.id.upSeekBar);
 		upSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 	        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -56,7 +72,7 @@ public class GyroStream extends Activity {
 		bluetoothAdapter = BluetoothAdapter
 				.getDefaultAdapter();
         if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
+            showState("Bt is not available");
         }
         
         
@@ -77,9 +93,30 @@ public class GyroStream extends Activity {
         		}
         	};
         });
-//        sticks.up = 30;
 	}
         
+	private void handlePIDSeekBars() {
+		handleOnePIDParam(R.id.pSeekBar, "gp", 100f, 0.8f);
+		handleOnePIDParam(R.id.iSeekBar, "gi", 100f, 0);
+		handleOnePIDParam(R.id.dSeekBar, "gd", 500f, 150);
+		handleOnePIDParam(R.id.wSeekBar, "gw", 5000f, 1000);
+	}
+
+	private void handleOnePIDParam(int id, final String propName, final float maxValue, final float initialValue) {
+		//int maxSeek = 
+		SeekBar seekBar = (SeekBar) findViewById(id);
+		seekBar.setMax(1000);
+		int initialProgress = (int) (initialValue / maxValue * 1000f);
+		seekBar.setProgress(initialProgress);
+		seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+	        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+	        	flightService.setProperty(propName, Float.toString(progress * maxValue / 1000f));
+	        }
+	        public void onStartTrackingTouch(SeekBar seekBar) {}
+	        public void onStopTrackingTouch(SeekBar seekBar) {}
+	    });
+	}
+
 	@Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -225,13 +262,14 @@ public class GyroStream extends Activity {
             }
         }
 
-		private void showState(String msg) {
-			Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
-//			mTitle.setText(msg);
-		}
     };
     
-    private final Handler gyroServerHandler = new Handler() {
+	private void showState(String msg) {
+//		Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+		btStatus.setText(msg);
+	}
+
+	private final Handler gyroServerHandler = new Handler() {
 		@Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -251,5 +289,6 @@ public class GyroStream extends Activity {
 		}
 
     };
+	private TextView btStatus;
 
 }

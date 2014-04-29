@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" >
+    android:layout_height="match_parent"
+    android:layout_margin="4dp" >
 
     <SeekBar
         android:id="@+id/upSeekBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentLeft="true" />
+        android:layout_alignParentLeft="true"
+        android:paddingTop="10dp" />
 
     <CheckBox
         android:id="@+id/armCheckbox"
@@ -18,12 +20,99 @@
         android:layout_alignParentTop="true"
         android:text="Arm" />
 
+    <TextView
+        android:id="@+id/btStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/armCheckbox"
+        android:layout_alignBottom="@+id/armCheckbox"
+        android:layout_alignParentRight="true"
+        android:text="Medium Text"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <SeekBar
+        android:id="@+id/wSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/upSeekBar"
+        android:layout_toRightOf="@+id/textViewW" />
+
+    <SeekBar
+        android:id="@+id/dSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/wSeekBar"
+        android:layout_toRightOf="@+id/textViewD" />
+
+    <SeekBar
+        android:id="@+id/iSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/dSeekBar"
+        android:layout_alignLeft="@+id/pSeekBar" />
+
+    <SeekBar
+        android:id="@+id/pSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/iSeekBar"
+        android:layout_toRightOf="@+id/textViewP" />
+
     <se.rende.gyro.GlobeView
         android:id="@+id/globeView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/upSeekBar"
+        android:layout_above="@+id/pSeekBar"
         android:layout_alignParentLeft="true"
         android:layout_below="@+id/armCheckbox" />
+
+    <TextView
+        android:id="@+id/textViewP"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/pSeekBar"
+        android:layout_alignParentLeft="true"
+        android:minWidth="20dp"
+        android:text="P"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/textViewI"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/dSeekBar"
+        android:layout_alignParentLeft="true"
+        android:minWidth="20dp"
+        android:text="I"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/textViewD"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/dSeekBar"
+        android:layout_alignParentLeft="true"
+        android:minWidth="20dp"
+        android:text="D"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/textViewW"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/wSeekBar"
+        android:layout_alignParentLeft="true"
+        android:minWidth="20dp"
+        android:text="W"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <Button
+        android:id="@+id/resetButton"
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_below="@+id/armCheckbox"
+        android:text="Reset" />
 
 </RelativeLayout>
