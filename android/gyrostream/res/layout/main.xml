@@ -17,13 +17,6 @@
 	<RelativeLayout
 		    android:layout_width="fill_parent"
 		    android:layout_height="wrap_content">
-		<Button android:id="@+id/set_min_power"
-			android:text="Min"
-            android:layout_alignParentLeft="true"
-		    android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-            android:layout_marginTop="20px"
-		/>
 		<TextView android:id="@+id/powerText"
 		    android:layout_width="wrap_content" 
 		    android:layout_height="wrap_content" 
@@ -31,19 +24,5 @@
             android:layout_marginTop="10px"
             android:text="50%"
 		/>
-		<Button android:id="@+id/set_max_power"
-			android:text="Max"
-            android:layout_alignParentRight="true"
-		    android:layout_width="wrap_content"
-	        android:layout_height="wrap_content"
-            android:layout_marginTop="20px"
-		/>
 	</RelativeLayout>
-    <ListView android:id="@+id/received"
-        android:layout_width="match_parent"
-        android:layout_height="fill_parent"
-        android:stackFromBottom="true"
-        android:transcriptMode="alwaysScroll"
-        android:layout_weight="1"
-    />
 </LinearLayout>

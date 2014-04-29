@@ -7,15 +7,16 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.SeekBar;
 import android.widget.Toast;
 
 public class GyroStream extends Activity {
@@ -25,15 +26,33 @@ public class GyroStream extends Activity {
 	private static final int REQUEST_ENABLE_BT = 2;
 	private BluetoothAdapter bluetoothAdapter;
 	private BluetoothService bluetoothService;
-	private AndroidGyroStreamServerClient gyroServer;
+	private AndroidGyroStreamServer gyroServer;
     private FlightService.StickValues sticks = new StickValues();
 	private FlightService flightService;
+	private GlobeView globeView;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		globeView = new GlobeView(this);
-		setContentView(globeView);
+		
+		setContentView(R.layout.manual);
+		CheckBox armCheckbox = (CheckBox) findViewById(R.id.armCheckbox);
+		armCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+		   public void onCheckedChanged(CompoundButton buttonView,boolean isChecked) {
+			   flightService.setArmed(isChecked);
+		   }
+		});
+		globeView = (GlobeView) findViewById(R.id.globeView);
+		Log.d("DEBUG", "globeView=" + globeView);
+		SeekBar upSeekBar = (SeekBar) findViewById(R.id.upSeekBar);
+		upSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+	        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+	        	sticks.up = progress;
+	        }
+	        public void onStartTrackingTouch(SeekBar seekBar) {}
+	        public void onStopTrackingTouch(SeekBar seekBar) {}
+	    });
+		
 		bluetoothAdapter = BluetoothAdapter
 				.getDefaultAdapter();
         if (bluetoothAdapter == null) {
@@ -41,13 +60,13 @@ public class GyroStream extends Activity {
         }
         
         
-        gyroServer = new AndroidGyroStreamServerClient("nexter", gyroServerHandler, "192.168.0.42", 8123);
+        gyroServer = new AndroidGyroStreamServer("nexter", gyroServerHandler);
         
         flightService = new FlightService(this);
         flightService.setSticks(sticks);
         flightService.addAngleListener(new FlightService.AngleListener() {
         	public void angleChanged(final double pitch, final double roll, final double yaw) {
-        		if (!flightService.isArmed()) {
+        		if (!flightService.isArmed() && globeView != null) {
 	        		globeView.post(new Runnable() {
 	        			double[] power = flightService.getPower();
 	    				public void run() {
@@ -232,6 +251,5 @@ public class GyroStream extends Activity {
 		}
 
     };
-	private GlobeView globeView;
 
 }

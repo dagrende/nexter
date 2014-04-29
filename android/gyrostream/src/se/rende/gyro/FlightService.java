@@ -287,9 +287,9 @@ public class FlightService {
 		}
 		String message = "p" + (int) (power[0]) + " " + (int) (power[1]) + " "
 				+ (int) (power[2]) + " " + (int) (power[3]) + "\r";
-		if (bluetoothService != null && bluetoothService.getState() == BluetoothServiceState.CONNECTED && isArmed()) {
+		if (isArmed()) {
 			// send power settings command to motors
-			bluetoothService.write(message.getBytes());
+			sendBluetooth(message);
 		}
 		
 		// log power settings command
@@ -478,10 +478,6 @@ public class FlightService {
 			setArmed(true);
 		} else if ("disarm".equals(verb)) {
 			setArmed(false);
-			if (bluetoothService != null && bluetoothService.getState() == BluetoothServiceState.CONNECTED) {
-				// turn off all four motors
-				bluetoothService.write("p0 0 0 0\r".getBytes());
-			}
 		} else {
 			cmdTaken = false;
 		}
@@ -584,6 +580,14 @@ public class FlightService {
 
 	public void setArmed(boolean armed) {
 		this.armed = armed;
+		sendBluetooth("p0 0 0 0\r");
+	}
+
+	private void sendBluetooth(String command) {
+		if (bluetoothService != null && bluetoothService.getState() == BluetoothServiceState.CONNECTED) {
+			// turn off all four motors
+			bluetoothService.write(command.getBytes());
+		}
 	}
 
 	public boolean isArmed() {

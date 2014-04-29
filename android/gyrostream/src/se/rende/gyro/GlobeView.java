@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.Point;
 import android.graphics.RectF;
+import android.util.AttributeSet;
 import android.view.View;
 
 /**
@@ -31,8 +32,8 @@ public class GlobeView extends View {
 	private Paint redStrokePaint;
 	private Paint whiteFillPaint;
 	
-	public GlobeView(Context context) {
-		super(context);
+	public GlobeView(Context context, AttributeSet attrs) {
+		super(context, attrs);
 		whiteStrokePaint = new Paint();
 		whiteStrokePaint.setColor(Color.WHITE);
 		whiteStrokePaint.setStyle(Style.STROKE);
