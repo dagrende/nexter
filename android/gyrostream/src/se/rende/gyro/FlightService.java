@@ -21,6 +21,8 @@
 
 package se.rende.gyro;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -52,13 +54,10 @@ public class FlightService {
 	private static final int XAXIS = 0;
 	private static final int YAXIS = 1;
 	private static final int ZAXIS = 2;
-	private static final double ACCEL_SMOOTH_FACTOR = 1f;
 	private static final int THROW_AWAY_SAMPLES = 100;
 	private static final int CALIBATE_VALUE_COUNT = 49;
-	private static final double ATTITUDE_SCALING = (double)Math.PI / 4 / 100;
-	private static final double MAXOUTPUT = 50;
+	private static final double ATTITUDE_SCALING = 1.0;
 	private FlightAngle flightAngle = new FlightAngleARG();
-	private PIDdata accelPID[] = new PIDdata[3];
 	private PIDdata stickPID[] = new PIDdata[3];
 	private PIDdata gyroPID[] = new PIDdata[3];
 	private BluetoothService bluetoothService;
@@ -68,10 +67,6 @@ public class FlightService {
 	private double accelZero[] = new double[3];
 	private double gyro[] = new double[3];
 	private double gyroZero[] = new double[3];
-	private NexterUtil.Smoother[] accelFilter = {
-			new NexterUtil.Smoother(ACCEL_SMOOTH_FACTOR),
-			new NexterUtil.Smoother(ACCEL_SMOOTH_FACTOR),
-			new NexterUtil.Smoother(ACCEL_SMOOTH_FACTOR) };
 	private double accelCalibrateValues[][] = { new double[CALIBATE_VALUE_COUNT],
 			new double[CALIBATE_VALUE_COUNT], new double[CALIBATE_VALUE_COUNT] };
 	private int accelCalibrateIndex = 0;
@@ -94,6 +89,7 @@ public class FlightService {
 			{"si", "0"}, 
 			{"sd", "0"}, 
 			{"sw", "0.375"}};
+	private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
 
 	private enum Mode {
 		CALIBRATION, FLIGHT
@@ -270,22 +266,11 @@ public class FlightService {
 	}
 
 	protected void processFlightControl(double[] angles, double dT) {
-//		double pitchAttitudeCmd = updatePID(sticks.forward * ATTITUDE_SCALING,
-//				-flightAngle.getAngle(PITCH), stickPID[PITCH], dT, "stickPID[PITCH]");
-//		double rollAttitudeCmd = updatePID(sticks.right * ATTITUDE_SCALING,
-//				flightAngle.getAngle(ROLL), stickPID[ROLL], dT, "stickPID[ROLL]");
-
 		double pitchAttitudeCmd = sticks.forward * ATTITUDE_SCALING;
 		double rollAttitudeCmd = sticks.right * ATTITUDE_SCALING;
 		
 		double pitchForce = updatePID(pitchAttitudeCmd, -angles[PITCH], gyroPID[PITCH], dT, "gyroPID[PITCH]");
 		double rollForce = updatePID(rollAttitudeCmd, angles[ROLL], gyroPID[ROLL],	dT, "gyroPID[ROLL]");
-
-//		if (lastTime - System.currentTimeMillis() < -200l) {
-//			Log.d("pos", "ierr=" + gyroPID[PITCH].integratedError);
-//			lastTime = System.currentTimeMillis();
-//		}
-		// processHeading();
 
 		double yawForce = 0;
 
@@ -297,8 +282,6 @@ public class FlightService {
 		power[2] = sticks.up - pitchForce - rollForce + yawForce;
 		power[1] = sticks.up + pitchForce + rollForce + yawForce;
 		power[0] = sticks.up + pitchForce - rollForce - yawForce;
-
-		// processMinMaxMotorCommand();
 		
 		if (sticks.up > 0f) {
 			// limit 
@@ -324,62 +307,6 @@ public class FlightService {
 
 	long lastTime = 0;
 	/**
-	 * do one pid calculation step
-	 * @param targetPosition
-	 * @param currentPosition
-	 * @param pidData
-	 * @param dt
-	 * @param label
-	 * @return
-	 */
-	private double updatePIDAVRPID(double targetPosition, double currentPosition, PIDdata pidData, double dt, String label) {
-//		Log.d("pid", pidData.toString());
-		
-	    double Perror = targetPosition - currentPosition; 
-	    double output = (pidData.p * Perror + pidData.i * pidData.integratedError) / pidData.o 
-	    		+ pidData.d * (Perror - pidData.prevError);
-	    pidData.prevError = Perror; 
-	    pidData.integratedError += Perror; 
-	  
-	    // Accumulate Integral error *or* Limit output. 
-	    // Stop accumulating when output saturates 
-	    if (output > MAXOUTPUT) {
-	    	Log.d("pid", String.format("op=%.3d tp=%.3d cp=%.3d dt=%d", output, targetPosition, currentPosition, dt));
-	        output = MAXOUTPUT; 
-	    } else if (output < -MAXOUTPUT) {
-	    	Log.d("pid", String.format("op=%.3d tp=%.3d cp=%.3d dt=%d", output, targetPosition, currentPosition, dt));
-	        output = -MAXOUTPUT; 
-	    }
-	    return output; 
-	}
-	
-	/**
-	 * PID step slightly modified code from http://www.eetimes.com/design/embedded/4211211/PID-without-a-PhD.
-	 * @param targetPosition
-	 * @param currentPosition
-	 * @param pid
-	 * @param dt
-	 * @param label
-	 * @return
-	 */
-	double updatePIDEE(double targetPosition, double currentPosition, PIDdata pid, double dt, String label) {
-		double error = targetPosition - currentPosition;
-		double pTerm = pid.p * error;
-		// calculate the proportional term
-		// calculate the integral state with appropriate limiting
-		pid.integratedError += error;
-		if (pid.integratedError > pid.windupGuard) {
-			pid.integratedError = pid.windupGuard;
-		} else if (pid.integratedError < -pid.windupGuard) {
-			pid.integratedError = -pid.windupGuard;
-		}
-		double iTerm = pid.i * pid.integratedError; // calculate the integral term
-		double dTerm = pid.d * (currentPosition - pid.dState);
-		pid.dState = currentPosition;
-		return pTerm + iTerm - dTerm;
-	}
-	
-	/**
 	 * After http://en.wikipedia.org/wiki/PID_controller.
 	 * @param targetPosition
 	 * @param currentPosition
@@ -401,36 +328,6 @@ public class FlightService {
 		  return (pid.p * error) + (pid.i * pid.integratedError) + (pid.d * derivative);
 	}
 
-//	previous_error = setpoint - actual_position
-//			integral = 0
-//			start:
-//			  error = setpoint - actual_position
-//			  integral = integral + (error*dt)
-//			  derivative = (error - previous_error)/dt
-//			  output = (Kp*error) + (Ki*integral) + (Kd*derivative)
-//			  previous_error = error
-//			  wait(dt)
-//			  goto start
-
-	// Modified from
-	// http://www.arduino.cc/playground/Main/BarebonesPIDForEspresso
-//	public double updatePID(double targetPosition, double currentPosition, PIDdata pidData, double dt, String label) {
-//		double error = targetPosition - currentPosition;
-//		if (pidData.firstPass) { // AKA PID experiments
-//			pidData.firstPass = false;
-//			pidData.lastPosition = currentPosition;
-//			error = NexterUtil.constrain(error, -pidData.windupGuard, pidData.windupGuard);
-//		} else {
-//			pidData.integratedError += error * dt;
-//			pidData.integratedError = NexterUtil.constrain(pidData.integratedError, -pidData.windupGuard, pidData.windupGuard);
-//			double dTerm = pidData.d	* (currentPosition - pidData.lastPosition) / (dt * 100);
-//			pidData.lastPosition = currentPosition;
-//			error = pidData.p * error + pidData.i * pidData.integratedError + dTerm;
-//		}
-////		Log.d("FlightService", label + ": " + error + "=updatePID(" + targetPosition + ", " + currentPosition + ", " + pidData + ", " + dt + ")");
-//		return error;
-//	}
-	
 	protected void logArray(String label, double[] a) {
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < a.length; i++) {
@@ -447,19 +344,13 @@ public class FlightService {
 		return power;
 	}
 
-	// void zeroIntegralError(long currentTime) {
-	// for (byte axis = ROLL; axis < LASTLEVELAXIS; axis++) {
-	// PID[axis].integratedError = 0;
-	// PID[axis].previousPIDTime = currentTime;
-	// }
-	// }
-
 	public void setBluetoothService(BluetoothService bluetoothService) {
 		this.bluetoothService = bluetoothService;
 	}
 
 	public void setSticks(StickValues sticks) {
 		this.sticks = sticks;
+		propertyChangeSupport.firePropertyChange("sticks", null, sticks);
 	}
 
 	public static class StickValues {
@@ -574,6 +465,7 @@ public class FlightService {
 		} else {
 			return false;
 		}
+		propertyChangeSupport.firePropertyChange(propName, null, value);
 		return true;
 	}
 	
@@ -618,6 +510,16 @@ public class FlightService {
 
 	public boolean isArmed() {
 		return armed;
+	}
+
+	public void addPropertyChangeListener(
+			PropertyChangeListener listener) {
+		propertyChangeSupport.addPropertyChangeListener(listener);
+	}
+
+	public void removePropertyChangeListener(
+			PropertyChangeListener listener) {
+		propertyChangeSupport.removePropertyChangeListener(listener);
 	}
 
 }

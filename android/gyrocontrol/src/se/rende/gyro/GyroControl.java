@@ -1,9 +1,26 @@
+/*
+ * Copyright (C) 2014 Dag Rende
+ * 
+ * Licensed under the GNU General Public License v3
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @author Dag Rende
+ */
+
 package se.rende.gyro;
 
-import java.util.Timer;
-import java.util.TimerTask;
-
-import se.rende.gyro.TwoSticksView.StickChangeListener;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,35 +28,89 @@ import android.os.Message;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.SeekBar;
-import android.widget.SeekBar.OnSeekBarChangeListener;
-import android.widget.TextView;
 import android.widget.Toast;
 
-public class GyroControl extends Activity implements StickChangeListener {
-    private static final int PORT = 8123;
-	private static final String HOST = "192.168.0.42";
-	private TwoSticksView twoSticksView;
-	private TextView statusTextView;
-	private GyroStreamServerClient gyroStreamServerClient;
-	private Timer sendStickValuesTimer;
+public class GyroControl extends Activity {
+	private GyroStreamServerClient gyroServer;
+	private FlightService flightService;
+	private GlobeView globeView;
+	private SeekBar upSeekBar;
+	private double up = 0;
 
-	/** Called when the activity is first created. */
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-		setContentView(R.layout.main);
-		twoSticksView = (TwoSticksView)findViewById(R.id.twoSticks);
-		twoSticksView.addStickChangeListener(this);
-		statusTextView = (TextView)findViewById(R.id.status);
-		statusTextView.setText("Not connected");
-		gyroStreamServerClient = new GyroStreamServerClient(handler, HOST, PORT);
-		sendStickValuesTimer = new Timer("sendStickValues");
-		SeekBar gyroFactor = (SeekBar) findViewById(R.id.gyro_factor);
-		gyroFactor.setOnSeekBarChangeListener(onSeekBarChangeListener);
-    }
-    
-    @Override
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		
+		setContentView(R.layout.manual);
+		
+		CheckBox onCheckBox = (CheckBox) findViewById(R.id.onCheckBox);
+		onCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+			   public void onCheckedChanged(CompoundButton buttonView,boolean isChecked) {
+				   if (isChecked) {
+					   flightService.start();
+				   } else {
+					   flightService.stop();
+				   }
+			   }
+			});
+		
+		globeView = (GlobeView) findViewById(R.id.globeView);
+		
+        flightService = new FlightService(this);
+        flightService.addAngleListener(new FlightService.AngleListener() {
+        	public void angleChanged(final double pitch, final double roll, final double yaw) {
+        		if (globeView != null) {
+	        		globeView.post(new Runnable() {
+	    				public void run() {
+	    					globeView.setAngles(-pitch, roll, 0 * yaw);
+	    					gyroServer.writeLine(String.format("s %.2f %.2f %.2f %.2f", up, -pitch, roll, 0 * yaw));
+	    				}
+	        		});
+        		}
+        	};
+        });
+
+        upSeekBar = (SeekBar) findViewById(R.id.upSeekBar);
+		upSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+	        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+	        	up = seekBar.getProgress();
+	        }
+	        public void onStartTrackingTouch(SeekBar seekBar) {}
+	        public void onStopTrackingTouch(SeekBar seekBar) {
+	        }
+	    });
+		        
+        gyroServer = new GyroStreamServerClient(gyroServerHandler, "192.168.43.1", 8081);
+    	gyroServer.connect();
+
+
+		handleOnePIDParam(R.id.pSeekBar, "gp", 100f, 0.8f);
+		handleOnePIDParam(R.id.iSeekBar, "gi", 100f, 0);
+		handleOnePIDParam(R.id.dSeekBar, "gd", 500f, 150);
+		handleOnePIDParam(R.id.wSeekBar, "gw", 5000f, 1000);
+
+	}
+        
+	private void handleOnePIDParam(int id, final String propName, final float maxValue, final float initialValue) {
+		final float factor = maxValue / 1000f;
+		final SeekBar seekBar = (SeekBar) findViewById(id);
+		seekBar.setMax(1000);
+		int initialProgress = (int) (initialValue / factor);
+		seekBar.setProgress(initialProgress);
+		seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+	        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+	        }
+	        public void onStartTrackingTouch(SeekBar seekBar) {}
+	        public void onStopTrackingTouch(SeekBar seekBar) {
+	        	gyroServer.writeLine("set " + propName + " " + Float.toString(seekBar.getProgress() * factor));
+	        }
+	    });
+	}
+
+	@Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.option_menu, menu);
@@ -50,101 +121,45 @@ public class GyroControl extends Activity implements StickChangeListener {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
         case R.id.connect:
-        	gyroStreamServerClient.connect();
-            return true;
+        	gyroServer.connect();
+        	return true;
         case R.id.disconnect:
-        	gyroStreamServerClient.disconnect();
-        	break;
+        	gyroServer.disconnect();
+        	return true;
         }
         return false;
     }
 
-    StickValues lastStickValues = new StickValues();
-    StickValues stickValues = new StickValues();
-
-	public void changedStick(int stickId, float x, float y) {
-		if (stickId == 0) {
-			stickValues.up = -y * 100f;
-			stickValues.turnCw = x * 100f;
-		} else if (stickId == 1) {
-			stickValues.forward = -y * 100f;
-			stickValues.right = x * 100f;
-		}
+	
+    @Override
+	protected void onStart() {
+    	super.onStart();
 	}
     
-    TimerTask sendStickValuesTimeTask = new TimerTask() {
-		@Override
-		public void run() {
-			if (!lastStickValues.equals(stickValues)) {
-//				Log.d("GyroControl", "up=" + stickValues.up + " turnCw=" + stickValues.turnCw + " forward=" + stickValues.forward + " right=" + stickValues.right);
-				gyroStreamServerClient.writeLine(
-						"s " + (int)stickValues.up +
-						" " + (int)stickValues.turnCw +
-						" " + (int)stickValues.forward +
-						" " + (int)stickValues.right);
-				lastStickValues.set(stickValues);
-			}
-		}
-    };
-    
-	private OnSeekBarChangeListener onSeekBarChangeListener = new OnSeekBarChangeListener() {
-		
-		public void onStopTrackingTouch(SeekBar seekBar) {
-			int progress = seekBar.getProgress();
-			float gyroFactor = progress / (float)seekBar.getMax();
-			gyroStreamServerClient.writeLine("set gyroFactor " + gyroFactor);
-		}
-		
-		public void onStartTrackingTouch(SeekBar arg0) {
-			// TODO Auto-generated method stub
-			
-		}
-		
-		public void onProgressChanged(SeekBar arg0, int arg1, boolean arg2) {
-			// TODO Auto-generated method stub
-			
-		}
-	};
-    private final Handler handler = new Handler() {
+    @Override
+    protected void onStop() {
+    	super.onStop();
+    	flightService.stop();
+    }
+	
+	private final Handler gyroServerHandler = new Handler() {
 		@Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
             case GyroStreamServerClient.MESSAGE_RECEIVED_LINE:
-            	// from server
+//            	handleGyroStreamCommand(msg.getData().getString("message"));
             	break;
             case GyroStreamServerClient.MESSAGE_CONNECT:
                 Toast.makeText(GyroControl.this, "connected", Toast.LENGTH_LONG).show();
-            	statusTextView.setText("Connected to " + HOST + ":" + PORT);
-            	sendStickValuesTimer.schedule(sendStickValuesTimeTask, 0l, 100l);
             	break;
             case GyroStreamServerClient.MESSAGE_DISCONNECT:
                 Toast.makeText(GyroControl.this, "disconnected", Toast.LENGTH_LONG).show();
-            	statusTextView.setText("Not connected");
-            	sendStickValuesTimer.cancel();
             	break;
             case GyroStreamServerClient.MESSAGE_ERROR:
                 Toast.makeText(GyroControl.this, "connection error " + msg.getData().getString("message"), Toast.LENGTH_LONG).show();
             	break;
             }
 		}
+
     };
-    
-    class StickValues {
-    	float up;
-    	float turnCw;
-    	float forward;
-    	float right;
-    	
-    	public boolean equals(StickValues v) {
-    		return up == v.up && turnCw == v.turnCw && forward == v.forward && right == v.right;
-    	}
-    	
-    	public void set(StickValues v) {
-    		up = v.up;
-    		turnCw = v.turnCw;
-    		forward = v.forward;
-    		right = v.right;
-    	}
-    }
-    
 }

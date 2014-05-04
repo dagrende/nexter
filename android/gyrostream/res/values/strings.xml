@@ -14,5 +14,5 @@
 
     <!-- Options Menu -->
     <string name="connect_to_avr">Connect to AVR</string>
-    <string name="connect_as_nexter">Connect as Nexter</string>
+    <string name="stop">Stop</string>
 </resources>

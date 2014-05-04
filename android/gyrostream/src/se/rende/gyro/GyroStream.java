@@ -21,6 +21,8 @@
 
 package se.rende.gyro;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.StringTokenizer;
 
 import se.rende.gyro.FlightService.StickValues;
@@ -35,8 +37,6 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.SeekBar;
@@ -54,6 +54,8 @@ public class GyroStream extends Activity {
     private FlightService.StickValues sticks = new StickValues();
 	private FlightService flightService;
 	private GlobeView globeView;
+	private TextView btStatus;
+	private SeekBar upSeekBar;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -79,6 +81,7 @@ public class GyroStream extends Activity {
 			   public void onCheckedChanged(CompoundButton buttonView,boolean isChecked) {
 				   if (isChecked) {
 					   flightService.start();
+					   gyroServer.start();
 				   } else {
 					   flightService.stop();
 				   }
@@ -87,12 +90,30 @@ public class GyroStream extends Activity {
 		
 		globeView = (GlobeView) findViewById(R.id.globeView);
 		
-		handleOnePIDParam(R.id.pSeekBar, "gp", 100f, 0.8f);
-		handleOnePIDParam(R.id.iSeekBar, "gi", 100f, 0);
-		handleOnePIDParam(R.id.dSeekBar, "gd", 500f, 150);
-		handleOnePIDParam(R.id.wSeekBar, "gw", 5000f, 1000);
+        flightService = new FlightService(this);
+        flightService.setSticks(sticks);
+        flightService.addAngleListener(new FlightService.AngleListener() {
+        	public void angleChanged(final double pitch, final double roll, final double yaw) {
+        		if (globeView != null) {
+	        		globeView.post(new Runnable() {
+	        			double[] power = flightService.getPower();
+	    				public void run() {
+	    					globeView.setAngles(-pitch, roll, 0 * yaw);
+	    					globeView.setPower(power[0], power[1], power[2], power[3]);
+	    				}
+	        		});
+        		}
+        	};
+        });
 
-		upSeekBar = (SeekBar) findViewById(R.id.upSeekBar);
+        upSeekBar = (SeekBar) findViewById(R.id.upSeekBar);
+		flightService.addPropertyChangeListener(new PropertyChangeListener() {
+			public void propertyChange(PropertyChangeEvent event) {
+				if ("sticks".equals(event.getPropertyName())) {
+					upSeekBar.setProgress((int) (((FlightService.StickValues) event.getNewValue()).up));
+				}
+			}
+		});
 		upSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 	        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
 	        	sticks.up = progress;
@@ -109,40 +130,37 @@ public class GyroStream extends Activity {
         
         
         gyroServer = new AndroidGyroStreamServer("nexter", gyroServerHandler);
-        
-        flightService = new FlightService(this);
-        flightService.setSticks(sticks);
-        flightService.addAngleListener(new FlightService.AngleListener() {
-        	public void angleChanged(final double pitch, final double roll, final double yaw) {
-        		if (globeView != null) {
-	        		globeView.post(new Runnable() {
-	        			double[] power = flightService.getPower();
-	    				public void run() {
-	    					globeView.setAngles(-pitch, roll, 0 * yaw);
-	    					globeView.setPower(power[0], power[1], power[2], power[3]);
-	    				}
-	        		});
-        		}
-        	};
-        });
-	}
-        
-	private void handlePIDSeekBars() {
-		handleOnePIDParam(R.id.pSeekBar, "gp", 100f, 0.8f);
-		handleOnePIDParam(R.id.iSeekBar, "gi", 100f, 0);
-		handleOnePIDParam(R.id.dSeekBar, "gd", 500f, 150);
-		handleOnePIDParam(R.id.wSeekBar, "gw", 5000f, 1000);
-	}
+    	gyroServer.start();
 
+
+		handleOnePIDParam(R.id.pSeekBar, "gp", 100f, 0.8f);
+		handleOnePIDParam(R.id.iSeekBar, "gi", 10f, 0);
+		handleOnePIDParam(R.id.dSeekBar, "gd", 10f, 0);
+		handleOnePIDParam(R.id.wSeekBar, "gw", 5000f, 1000);
+
+	}
+        
 	private void handleOnePIDParam(int id, final String propName, final float maxValue, final float initialValue) {
-		//int maxSeek = 
-		SeekBar seekBar = (SeekBar) findViewById(id);
+		final float factor = maxValue / 1000f;
+		final SeekBar seekBar = (SeekBar) findViewById(id);
 		seekBar.setMax(1000);
-		int initialProgress = (int) (initialValue / maxValue * 1000f);
+		int initialProgress = (int) (initialValue / factor);
 		seekBar.setProgress(initialProgress);
+		flightService.addPropertyChangeListener(new PropertyChangeListener() {
+			public void propertyChange(PropertyChangeEvent event) {
+				if (propName.equals(event.getPropertyName())) {
+					seekBar.setProgress((int) (Float.parseFloat((String) event.getNewValue()) / factor));
+				}
+			}
+		});
 		seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+			int setPropertyNesting = 0;
 	        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-	        	flightService.setProperty(propName, Float.toString(progress * maxValue / 1000f));
+	        	if (setPropertyNesting == 0) {
+	        		setPropertyNesting++;
+	        		flightService.setProperty(propName, Float.toString(progress * factor));
+	        		setPropertyNesting--;
+	        	}
 	        }
 	        public void onStartTrackingTouch(SeekBar seekBar) {}
 	        public void onStopTrackingTouch(SeekBar seekBar) {}
@@ -165,27 +183,33 @@ public class GyroStream extends Activity {
             Intent serverIntent = new Intent(this, DeviceListActivity.class);
             startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
             return true;
-        case R.id.connect_as_nexter:
-        	gyroServer.connect();
+        case R.id.stop:
+        	gyroServer.stop();
+        	flightService.stop();
+        	if (bluetoothService != null) {
+        		bluetoothService.stop();
+        	}
         }
         return false;
     }
 
     private void handleGyroStreamCommand(String cmd) {
+    	Log.d("GyroStream", "received: " + cmd);
     	StringTokenizer st = new StringTokenizer(cmd, " \n\r");
 		if (cmd.startsWith("s ")) {
-			// stick change command "su t f r\n" where u, t, f and r if floats for up, turnCw, forward and right
+			// stick change command "s u t f r\n" where u, t, f and r if floats for up, turnCw, forward and right
 			st.nextToken();
-			sticks.up = -Float.parseFloat(st.nextToken());
-			sticks.turnCw = Float.parseFloat(st.nextToken());
+			sticks.up = Float.parseFloat(st.nextToken());
 			sticks.forward = Float.parseFloat(st.nextToken());
 			sticks.right = Float.parseFloat(st.nextToken());
+			sticks.turnCw = Float.parseFloat(st.nextToken());
 			
-//			Log.d("GyroStream", "up=" + sticks.up + " turnCw=" + sticks.turnCw + " forward=" 
-//					+ sticks.forward + " right=" + sticks.right);
-//			twoSticksView.setSticks(sticks.turnCw / 100f, -sticks.up / 100f, sticks.right / 100f, -sticks.forward / 100f);
-			
+			Log.d("GyroStream", 
+					String.format("up=%.2f forward=%.2f right=%.2f turnCw=%.2f", 
+					sticks.up, sticks.forward, sticks.right, sticks.turnCw));			
 			flightService.setSticks(sticks);
+			
+			
 		} else if ("getProps".equals(cmd)) {
 			gyroServer.writeLine(flightService.getAllProps());
 		} else if (flightService.executeCommand(cmd)) {
@@ -320,7 +344,4 @@ public class GyroStream extends Activity {
 		}
 
     };
-	private TextView btStatus;
-	private SeekBar upSeekBar;
-
 }

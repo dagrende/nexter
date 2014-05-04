@@ -20,7 +20,7 @@
  */
 package se.rende.gyro;
 
-import se.rende.gyro.GyroStreamServerClient.MessageListener;
+import se.rende.gyro.GyroStreamServer.MessageListener;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -34,12 +34,12 @@ import android.os.Message;
 public class AndroidGyroStreamServer implements MessageListener {
 	private int port = 8081;
 	private Handler handler;
-//	private GyroStreamServerClient gyroStreamServerClient;
+	private GyroStreamServer gyroStreamServer;
 	
 	public AndroidGyroStreamServer(String name, Handler handler) {
 		this.handler = handler;
-//		gyroStreamServerClient = new GyroStreamServerClient(name, host, port);
-//		gyroStreamServerClient.addMessageListener(this);
+		gyroStreamServer = new GyroStreamServer(name, port);
+		gyroStreamServer.addMessageListener(this);
 	}
 	
 	public AndroidGyroStreamServer(String name, Handler handler, int port) {
@@ -47,12 +47,12 @@ public class AndroidGyroStreamServer implements MessageListener {
 		this.port = port;
 	}
 	
-	public void connect() {
-//		gyroStreamServerClient.connect();
+	public void start() {
+		gyroStreamServer.start();
 	}
 	
-	public void disconnect() {
-//		gyroStreamServerClient.disconnect();
+	public void stop() {
+		gyroStreamServer.stop();
 	}
 
 	
@@ -71,7 +71,7 @@ public class AndroidGyroStreamServer implements MessageListener {
 	}
 
 	public synchronized void writeLine(String line) {
-//		gyroStreamServerClient.writeLine(line);
+		gyroStreamServer.writeLine(line);
 	}
 
 	public int getPort() {
@@ -81,6 +81,5 @@ public class AndroidGyroStreamServer implements MessageListener {
 	public void setPort(int port) {
 		this.port = port;
 	}
-
 
 }

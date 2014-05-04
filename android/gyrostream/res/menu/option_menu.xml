@@ -3,6 +3,6 @@
    <item android:id="@+id/scan"
           android:icon="@android:drawable/ic_menu_search"
           android:title="@string/connect_to_avr" />
-   <item android:id="@+id/connect_as_nexter"
-          android:title="@string/connect_as_nexter" />   
+   <item android:id="@+id/stop"
+          android:title="@string/stop" />   
 </menu>
